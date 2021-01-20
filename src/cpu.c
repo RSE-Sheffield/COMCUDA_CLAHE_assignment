@@ -71,10 +71,9 @@ void cpu_begin(const Image *input_image) {
     cpu_output_image.data = (unsigned char *)malloc(input_image->width * input_image->height);
 
 }
-void cpu_stage1() {
-    //@todo Keep or remove this global stuff?
-    //unsigned long long global_histogram[PIXEL_RANGE];
-    //memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
+int cpu_stage1() {
+    unsigned long long global_histogram[PIXEL_RANGE];
+    memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
     // Generate histogram per tile
     for (unsigned int t_x = 0; t_x < cpu_TILES_X; ++t_x) {
         for (unsigned int t_y = 0; t_y < cpu_TILES_Y; ++t_y) {
@@ -86,20 +85,20 @@ void cpu_stage1() {
                     const unsigned int pixel_offset = (p_y * cpu_input_image.width + p_x); 
                     const unsigned char pixel = cpu_input_image.data[tile_offset + pixel_offset];
                     cpu_histograms[t_x][t_y].histogram[pixel]++;
-                    //global_histogram[pixel]++;
+                    global_histogram[pixel]++;
                 }
             }
         }
     }
-    //// Find min and max in global histogram
-    //unsigned long long min_c = ULLONG_MAX;
-    //unsigned long long max_c = 0;
-    //for (int i = 0; i < PIXEL_RANGE; ++i) {
-    //  min_c = min_c < global_histogram[i] ? min_c : global_histogram[i];
-    //  max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
-    //}
-    //// Return the range (This would be range between most and least common hist values, doesn't make much sense)
-    //return max_c - min_c;
+    // Find the most common contrast value
+    unsigned long long max_c = 0;
+    int max_i = -1; // Init with an invalid value
+    for (int i = 0; i < PIXEL_RANGE; ++i) {
+        max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
+        max_i = i;
+    }
+    // Return the contrast value (it's index in the histogram), not the number of occurrences!
+    return max_i;
 }
 void cpu_stage2() {
     // Normalise histograms

@@ -4,9 +4,9 @@
 #include <cuda_runtime.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "include/stb_image.h"
+#include "external/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "include/stb_image_write.h"
+#include "external/stb_image_write.h"
 
 #include "main.h"
 #include "config.h"
@@ -97,6 +97,8 @@ int main(int argc, char **argv)
 
     // Create result for validation
     Image validation_image;
+    // Location to store result of stage1
+    int validation_most_common_contrast[PIXEL_RANGE];
     {
         // Copy metadata
         validation_image.width = input_image.width;
@@ -118,6 +120,43 @@ int main(int argc, char **argv)
         skip_cumulative_histogram(TILES_X, TILES_Y, histograms);
         skip_equalised_histogram(TILES_X, TILES_Y, histograms);
         skip_interpolate(&input_image, histograms, &validation_image);
+        // Find all contrast values with max (small chance multiple contrast values share max)
+        {
+            for (int i = 0; i < PIXEL_RANGE; ++i)
+                validation_most_common_contrast[i] = -1;
+            unsigned long long global_histogram[PIXEL_RANGE];
+            memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
+            // Generate histogram per tile
+            for (unsigned int t_x = 0; t_x < TILES_X; ++t_x) {
+                for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
+                    const unsigned int tile_offset = (t_y * TILES_X * TILE_SIZE * TILE_SIZE + t_x * TILE_SIZE); 
+                    // For each pixel within the tile
+                    for (int p_x = 0; p_x < TILE_SIZE; ++p_x) {
+                        for (int p_y = 0; p_y < TILE_SIZE; ++p_y) {
+                            // Load pixel
+                            const unsigned int pixel_offset = (p_y * input_image.width + p_x); 
+                            const unsigned char pixel = input_image.data[tile_offset + pixel_offset];
+                            histograms[t_x][t_y].histogram[pixel]++;
+                            global_histogram[pixel]++;
+                        }
+                    }
+                }
+            }
+            // Find max value
+            // Find the most common contrast value
+            unsigned long long max_c = 0;
+            int max_i = 0;
+            for (int i = 0; i < PIXEL_RANGE; ++i) {
+                max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
+                max_i = i;
+            }
+            // Find everywhere it occurs
+            int j = 0;
+            for (int i = max_i; i < PIXEL_RANGE; ++i) {
+                if (global_histogram[i] == max_c)
+                validation_most_common_contrast[j++] = i;
+            }
+        }
         // Free temporary resources
         free(histograms[0]);
         free(histograms);
@@ -125,6 +164,8 @@ int main(int argc, char **argv)
        
     Image output_image;
     Runtimes timing_log;
+    // Location to store result of stage1
+    int most_common_contrast = -1;
     const int TOTAL_RUNS = config.benchmark ? BENCHMARK_RUNS : 1;
     // Perform reverse if required
     if (config.reverse) {
@@ -149,7 +190,7 @@ int main(int argc, char **argv)
                 {
                     cpu_begin(&input_image);
                     CUDA_CALL(cudaEventRecord(initT));
-                    cpu_stage1();
+                    most_common_contrast = cpu_stage1();
                     CUDA_CALL(cudaEventRecord(stage1T));
                     cpu_stage2();
                     CUDA_CALL(cudaEventRecord(stage2T));
@@ -162,7 +203,7 @@ int main(int argc, char **argv)
                 {
                     openmp_begin(&input_image);
                     CUDA_CALL(cudaEventRecord(initT));
-                    openmp_stage1();
+                    most_common_contrast = openmp_stage1();
                     CUDA_CALL(cudaEventRecord(stage1T));
                     openmp_stage2();
                     CUDA_CALL(cudaEventRecord(stage2T));
@@ -176,7 +217,7 @@ int main(int argc, char **argv)
                     cuda_begin(&input_image);
                     CUDA_CHECK("cuda_begin()");
                     CUDA_CALL(cudaEventRecord(initT));
-                    cuda_stage1();
+                    most_common_contrast = cuda_stage1();
                     CUDA_CHECK("cuda_stage1()");
                     CUDA_CALL(cudaEventRecord(stage1T));
                     cuda_stage2();
@@ -258,8 +299,8 @@ int main(int argc, char **argv)
     // Validate and report
     {
         printf("Validation Status: \n");
-        printf("\t Image width: %s\n", validation_image.width == output_image.width ? "Pass" : "Fail");
-        printf("\t Image height: %s\n", validation_image.height == output_image.height ? "Pass" : "Fail");
+        printf("\tImage width: %s\n", validation_image.width == output_image.width ? "Pass" : "Fail");
+        printf("\tImage height: %s\n", validation_image.height == output_image.height ? "Pass" : "Fail");
         int v_size = validation_image.width * validation_image.height;
         int o_size = output_image.width * output_image.height;
         int s_size = v_size < o_size ? v_size : o_size;
@@ -275,7 +316,15 @@ int main(int argc, char **argv)
                 }
             }
         }
-        printf("\t Image pixels: %s (%d/%u wrong)\n", bad_pixels ?  "Fail": "Pass", bad_pixels, o_size);
+        printf("\tImage pixels: %s (%d/%u wrong)\n", bad_pixels ?  "Fail": "Pass", bad_pixels, o_size);
+        int bad_contrast = 1;
+        for (int i = 0; i < PIXEL_RANGE && validation_most_common_contrast[i] != -1; ++i){
+            if (most_common_contrast == validation_most_common_contrast[i]) {
+                bad_contrast = 0;
+                break;
+            }
+        }
+        printf("\tMost common contrast value: %s\n", bad_contrast ? "Fail": "Pass");
     }
 
     // Export output image

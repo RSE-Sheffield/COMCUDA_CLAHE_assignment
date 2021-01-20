@@ -3,8 +3,8 @@
 void cuda_begin(const Image *input_image) {
     
 }
-void cuda_stage1() {
-    
+int cuda_stage1() {
+    return -1;
 }
 void cuda_stage2() {
     

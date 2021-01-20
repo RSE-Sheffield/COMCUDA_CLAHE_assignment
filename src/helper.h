@@ -24,8 +24,8 @@ extern "C" {
 /// Stage 1 helpers
 ///
 
-void validate_histogram(const Image *input_image, Histogram **test_histograms);
-void skip_histogram(const Image *input_image, Histogram **histograms);
+void validate_histogram(const Image *input_image, Histogram **test_histograms, int max_contrast);
+int skip_histogram(const Image *input_image, Histogram **histograms);
 
 ///
 /// Stage 2 helpers
