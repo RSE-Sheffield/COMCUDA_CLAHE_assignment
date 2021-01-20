@@ -27,7 +27,11 @@ int main(int argc, char **argv)
     {
         user_cimage.data = stbi_load(config.input_file, &user_cimage.width, &user_cimage.height, &user_cimage.channels, 0);
         if (!user_cimage.data) {
-            printf("Unable to load image '%s', please try a different file.\n",argv[1]);
+            printf("Unable to load image '%s', please try a different file.\n", config.input_file);
+            return EXIT_FAILURE;
+        }
+        if (user_cimage.channels == 2) {
+            printf("2 channel images are not supported, please try a different file.\n");
             return EXIT_FAILURE;
         }
     }
@@ -38,7 +42,7 @@ int main(int argc, char **argv)
         input_cimage.width = (user_cimage.width / TILE_SIZE) * TILE_SIZE;
         input_cimage.height = (user_cimage.height / TILE_SIZE) * TILE_SIZE;
         input_cimage.channels = user_cimage.channels;
-        input_cimage.data = (unsigned char *)malloc(input_cimage.width * input_cimage.height * input_cimage.channels);
+        input_cimage.data = (unsigned char *)malloc(input_cimage.width * input_cimage.height * input_cimage.channels * sizeof(unsigned char));
         const int user_row_width = user_cimage.width * user_cimage.channels;
         const int input_row_width = input_cimage.width * input_cimage.channels;
         // Copy cropped data across
@@ -57,7 +61,6 @@ int main(int argc, char **argv)
     }
 
     // Convert image to HSV
-    //@todo Only if 3 channel?
     HSVImage hsv_image;
     {
         // Copy metadata
@@ -69,16 +72,21 @@ int main(int argc, char **argv)
         hsv_image.s = (float *)malloc(input_cimage.width * input_cimage.height * sizeof(float));
         hsv_image.v = (unsigned char *)malloc(input_cimage.width * input_cimage.height * sizeof(unsigned char));
         hsv_image.a = (unsigned char *)malloc(input_cimage.width * input_cimage.height * sizeof(unsigned char));
-        // Copy and convert data
-        for (int i = 0; i < hsv_image.width * hsv_image.height; ++i) {
-            rgb2hsv(
-            input_cimage.data[(i * input_cimage.channels) + 0],
-            input_cimage.data[(i * input_cimage.channels) + 1],
-            input_cimage.data[(i * input_cimage.channels) + 2],
-            hsv_image.h + i,
-            hsv_image.s + i,
-            hsv_image.v + i);
-            if (input_cimage.channels == 4) hsv_image.a[i] = input_cimage.data[(i * input_cimage.channels) + 3];
+        if (input_cimage.channels >= 3) {
+            // Copy and convert data
+            for (int i = 0; i < hsv_image.width * hsv_image.height; ++i) {
+                rgb2hsv(
+                input_cimage.data[(i * input_cimage.channels) + 0],
+                input_cimage.data[(i * input_cimage.channels) + 1],
+                input_cimage.data[(i * input_cimage.channels) + 2],
+                hsv_image.h + i,
+                hsv_image.s + i,
+                hsv_image.v + i);
+                if (input_cimage.channels == 4) hsv_image.a[i] = input_cimage.data[(i * input_cimage.channels) + 3];
+            }
+        } else if (input_cimage.channels == 1) {
+            // Single channel can just be dumped into v
+            memcpy(hsv_image.v, input_cimage.data, input_cimage.width * input_cimage.height * sizeof(unsigned char));
         }
     }
     free(input_cimage.data);
@@ -127,28 +135,19 @@ int main(int argc, char **argv)
             unsigned long long global_histogram[PIXEL_RANGE];
             memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
             // Generate histogram per tile
-            for (unsigned int t_x = 0; t_x < TILES_X; ++t_x) {
-                for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
-                    const unsigned int tile_offset = (t_y * TILES_X * TILE_SIZE * TILE_SIZE + t_x * TILE_SIZE); 
-                    // For each pixel within the tile
-                    for (int p_x = 0; p_x < TILE_SIZE; ++p_x) {
-                        for (int p_y = 0; p_y < TILE_SIZE; ++p_y) {
-                            // Load pixel
-                            const unsigned int pixel_offset = (p_y * input_image.width + p_x); 
-                            const unsigned char pixel = input_image.data[tile_offset + pixel_offset];
-                            histograms[t_x][t_y].histogram[pixel]++;
-                            global_histogram[pixel]++;
-                        }
-                    }
-                }
+            for (unsigned int i = 0; i < (unsigned int)(input_image.width * input_image.height); ++i) {                
+                const unsigned char pixel = input_image.data[i];
+                global_histogram[pixel]++;
             }
             // Find max value
             // Find the most common contrast value
             unsigned long long max_c = 0;
             int max_i = 0;
             for (int i = 0; i < PIXEL_RANGE; ++i) {
-                max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
-                max_i = i;
+                if (max_c < global_histogram[i]) {
+                    max_c = global_histogram[i];
+                    max_i = i;
+                }
             }
             // Find everywhere it occurs
             int j = 0;
@@ -183,6 +182,7 @@ int main(int argc, char **argv)
         // Run 1 or many times
         memset(&timing_log, 0, sizeof(Runtimes));
         for (int runs = 0; runs < TOTAL_RUNS; ++runs) {
+            memset(&output_image, 0, sizeof(Image));
             // Run Adaptive Histogram algorithm
             CUDA_CALL(cudaEventRecord(startT));
             switch (config.mode) {
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
             CUDA_CALL(cudaEventElapsedTime(&milliseconds, startT, stopT));
             timing_log.total += milliseconds;
             // Avoid memory leak
-            if (runs + 1 >= TOTAL_RUNS) {
+            if (runs + 1 < TOTAL_RUNS) {
                 if (output_image.data)
                     free(output_image.data);
             }
@@ -272,7 +272,6 @@ int main(int argc, char **argv)
     // Copy output image v channel back to hsv
     if (output_image.data) {
         memcpy(hsv_image.v, output_image.data, input_image.width * input_image.height * sizeof(unsigned char));
-        free(output_image.data);
     }
 
     // Convert HSV image back to rgb
@@ -281,23 +280,27 @@ int main(int argc, char **argv)
         output_cimage.width = (hsv_image.width / TILE_SIZE) * TILE_SIZE;
         output_cimage.height = (hsv_image.height / TILE_SIZE) * TILE_SIZE;
         output_cimage.channels = hsv_image.channels;
-        output_cimage.data = (unsigned char *)malloc(hsv_image.width * hsv_image.height * hsv_image.channels);
+        output_cimage.data = (unsigned char *)malloc(hsv_image.width * hsv_image.height * hsv_image.channels * sizeof(unsigned char));
         // Copy and convert data
-        for (int i = 0; i < output_cimage.width * output_cimage.height; ++i) {
-            hsv2rgb(
-                hsv_image.h[i],
-                hsv_image.s[i],
-                hsv_image.v[i],
-                output_cimage.data + (i * output_cimage.channels) + 0,
-                output_cimage.data + (i * output_cimage.channels) + 1,
-                output_cimage.data + (i * output_cimage.channels) + 2);
-            if (output_cimage.channels == 4) output_cimage.data[(i * output_cimage.channels) + 3] = hsv_image.a[i];
+        if (hsv_image.channels >= 3) {
+            for (int i = 0; i < output_cimage.width * output_cimage.height; ++i) {
+                hsv2rgb(
+                    hsv_image.h[i],
+                    hsv_image.s[i],
+                    hsv_image.v[i],
+                    output_cimage.data + (i * output_cimage.channels) + 0,
+                    output_cimage.data + (i * output_cimage.channels) + 1,
+                    output_cimage.data + (i * output_cimage.channels) + 2);
+                if (output_cimage.channels == 4) output_cimage.data[(i * output_cimage.channels) + 3] = hsv_image.a[i];
+            }
+        } else if (hsv_image.channels == 1) {
+            memcpy(output_cimage.data, hsv_image.v, hsv_image.width * hsv_image.height * sizeof(unsigned char));
         }
     }
     
 
-    // Validate and report
-    {
+    // Validate and report    
+    if (!config.reverse) {
         printf("Validation Status: \n");
         printf("\tImage width: %s\n", validation_image.width == output_image.width ? "Pass" : "Fail");
         printf("\tImage height: %s\n", validation_image.height == output_image.height ? "Pass" : "Fail");
@@ -306,17 +309,21 @@ int main(int argc, char **argv)
         int s_size = v_size < o_size ? v_size : o_size;
         int bad_pixels = 0;
         int close_pixels = 0;
-        for (int i = 0; i < s_size; ++i) {
-            if (output_image.data[i] != validation_image.data[i]) {
-                // Give a +-1 threshold for error (incase fast-math triggers a small difference in places)
-                if (output_image.data[i]+1 == validation_image.data[i] || output_image.data[i]-1 == validation_image.data[i]) {
-                    close_pixels++;
-                } else {
-                    bad_pixels++;
+        if (output_image.data) {
+            for (int i = 0; i < s_size; ++i) {
+                if (output_image.data[i] != validation_image.data[i]) {
+                    // Give a +-1 threshold for error (incase fast-math triggers a small difference in places)
+                    if (output_image.data[i]+1 == validation_image.data[i] || output_image.data[i]-1 == validation_image.data[i]) {
+                        close_pixels++;
+                    } else {
+                        bad_pixels++;
+                    }
                 }
             }
+            printf("\tImage pixels: %s (%d/%u wrong)\n", bad_pixels ?  "Fail": "Pass", bad_pixels, o_size);
+        } else {
+            printf("\tImage pixels: Fail, (output_image->data not set)\n");
         }
-        printf("\tImage pixels: %s (%d/%u wrong)\n", bad_pixels ?  "Fail": "Pass", bad_pixels, o_size);
         int bad_contrast = 1;
         for (int i = 0; i < PIXEL_RANGE && validation_most_common_contrast[i] != -1; ++i){
             if (most_common_contrast == validation_most_common_contrast[i]) {
@@ -328,9 +335,9 @@ int main(int argc, char **argv)
     }
 
     // Export output image
-    {
-        if (!stbi_write_png("output.png", output_cimage.width, output_cimage.height, output_cimage.channels, output_cimage.data, output_cimage.width * output_cimage.channels)) {
-            printf("Unable to save image output to output.png.\n");
+    if (config.output_file) {
+        if (!stbi_write_png(config.output_file, output_cimage.width, output_cimage.height, output_cimage.channels, output_cimage.data, output_cimage.width * output_cimage.channels)) {
+            printf("Unable to save image output to %s.\n", config.output_file);
             // return EXIT_FAILURE;
         }
     }
@@ -354,6 +361,7 @@ int main(int argc, char **argv)
     cudaDeviceReset();
     free(validation_image.data);
     free(output_cimage.data);
+    free(output_image.data);
     free(input_image.data);
     if (hsv_image.a)
         free(hsv_image.a);
@@ -376,10 +384,11 @@ void parse_args(int argc, char **argv, Config *config) {
     {
         char lower_arg[7];  // We only care about first 6 characters
         // Convert to lower case
-        for(int i = 0; argv[1][i] && i < 7; i++){
+        int i = 0;
+        for(; argv[1][i] && i < 6; i++){
             lower_arg[i] = tolower(argv[1][i]);
         }
-        lower_arg[6] = '\0';
+        lower_arg[i] = '\0';
         // Check for a match
         if (!strcmp(lower_arg, "cpu")) {
             config->mode = CPU;
@@ -411,18 +420,20 @@ void parse_args(int argc, char **argv, Config *config) {
         if (t_arg) 
             free(t_arg);
         t_arg = (char*)malloc(arg_len);
-        for(int j = 0; argv[i][j]; j++){
-            t_arg[i] = tolower(argv[i][j]);
+        int j = 0;
+        for(; argv[i][j]; ++j){
+            t_arg[j] = tolower(argv[i][j]);
         }
+        t_arg[j] = '\0';
         // Decide which arg it is
         if (!strcmp("--bench", t_arg) || !strcmp("--benchmark", t_arg)|| !strcmp("-b", t_arg)) {
             config->benchmark = 1;
             continue;
         }
-        if (!strcmp(t_arg + arg_len - 4, ".png")) {
+        if (!strcmp(t_arg + arg_len - 5, ".png")) {
             // Allocate memory and copy
             config->output_file = (char*)malloc(arg_len);
-            memcpy(config->output_file, argv[2], arg_len);
+            memcpy(config->output_file, argv[i], arg_len);
             continue;
         }
         if (!strcmp("--reverse", t_arg) || !strcmp("--invert", t_arg)|| !strcmp("-r", t_arg)) {
@@ -449,7 +460,7 @@ void print_help(const char *program_name) {
     fprintf(stderr, "Optional Arguments:\n");
     fprintf(stderr, line_fmt, "<output image>", "Output image, requires .png filetype");
     fprintf(stderr, line_fmt, "-b, --bench", "Enable benchmark mode");
-    fprintf(stderr, line_fmt, "-r, --reverse", "Perform reverse operation on input image");
+    fprintf(stderr, line_fmt, "-r, --reverse", "Perform reverse operation on input image (requires output_image set)");
 
     exit(EXIT_FAILURE);
 }

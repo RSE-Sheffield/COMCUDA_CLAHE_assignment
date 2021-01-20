@@ -76,28 +76,19 @@ void validate_histogram(const Image *input_image, Histogram **test_histograms, i
         unsigned long long global_histogram[PIXEL_RANGE];
         memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
         // Generate histogram per tile
-        for (unsigned int t_x = 0; t_x < TILES_X; ++t_x) {
-            for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
-                const unsigned int tile_offset = (t_y * TILES_X * TILE_SIZE * TILE_SIZE + t_x * TILE_SIZE); 
-                // For each pixel within the tile
-                for (int p_x = 0; p_x < TILE_SIZE; ++p_x) {
-                    for (int p_y = 0; p_y < TILE_SIZE; ++p_y) {
-                        // Load pixel
-                        const unsigned int pixel_offset = (p_y * input_image->width + p_x); 
-                        const unsigned char pixel = input_image->data[tile_offset + pixel_offset];
-                        histograms[t_x][t_y].histogram[pixel]++;
-                        global_histogram[pixel]++;
-                    }
-                }
-            }
+        for (unsigned int i = 0; i < input_image->width * input_image->height; ++i) {                
+            const unsigned char pixel = input_image->data[i];
+            global_histogram[pixel]++;
         }
         // Find max value
         // Find the most common contrast value
         unsigned long long max_c = 0;
         int max_i = 0;
         for (int i = 0; i < PIXEL_RANGE; ++i) {
-            max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
-            max_i = i;
+            if (max_c < global_histogram[i]) {
+                max_c = global_histogram[i];
+                max_i = i;
+            }
         }
         // Find everywhere it occurs
         int j = 0;

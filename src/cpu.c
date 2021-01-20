@@ -94,8 +94,10 @@ int cpu_stage1() {
     unsigned long long max_c = 0;
     int max_i = -1; // Init with an invalid value
     for (int i = 0; i < PIXEL_RANGE; ++i) {
-        max_c = max_c > global_histogram[i] ? max_c : global_histogram[i];
-        max_i = i;
+        if (max_c < global_histogram[i]) {
+            max_c = global_histogram[i];
+            max_i = i;
+        }
     }
     // Return the contrast value (it's index in the histogram), not the number of occurrences!
     return max_i;
