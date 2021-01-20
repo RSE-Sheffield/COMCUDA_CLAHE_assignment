@@ -539,6 +539,7 @@ void hsv2rgb(const float src_h, const float src_s, const unsigned char src_v, un
         case 3: r = p, g = q, b = v; break;
         case 4: r = t, g = p, b = v; break;
         case 5: r = v, g = p, b = q; break;
+        default: r=0, g=0, b=0;
     }
 
     *dst_r = (unsigned char)(r * 255); // dst_r : 0-255

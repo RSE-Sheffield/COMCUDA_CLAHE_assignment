@@ -76,7 +76,7 @@ void validate_histogram(const Image *input_image, Histogram **test_histograms, i
         unsigned long long global_histogram[PIXEL_RANGE];
         memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
         // Generate histogram per tile
-        for (unsigned int i = 0; i < input_image->width * input_image->height; ++i) {                
+        for (unsigned int i = 0; i < (unsigned int)(input_image->width * input_image->height); ++i) {                
             const unsigned char pixel = input_image->data[i];
             global_histogram[pixel]++;
         }
@@ -433,71 +433,13 @@ void skip_interpolate(const Image *input_image, Histogram **histograms, Image *o
 }
 
 void reverse_algorithm(const Image *input_image, Image *output_image) {
-    const unsigned int TILES_X = input_image->width / TILE_SIZE;
-    const unsigned int TILES_Y = input_image->height / TILE_SIZE;
-    // Allocate histogram
-    Histogram **histograms = (Histogram **)malloc(TILES_X * sizeof(Histogram*));
-    histograms[0] = (Histogram *)malloc(TILES_X * TILES_Y * sizeof(Histogram));
-    memset(histograms[0],0, TILES_X * TILES_Y * sizeof(Histogram));
-    for (unsigned int t_x = 1; t_x < TILES_X; ++t_x) {
-        histograms[t_x] = histograms[0] + t_x * TILES_Y;         
+    // Setup output image
+    *output_image = *input_image;
+    output_image->data = malloc(input_image->height * input_image->width * sizeof(unsigned char));
+    // Divide all contrast values by 1.3 and + 29
+    for (int i = 0; i < input_image->height * input_image->width; ++i) {
+        output_image->data[i] = 64 + (unsigned char)(input_image->data[i] / 2);
     }
-    // Allocate output image
-    output_image->width = input_image->width;
-    output_image->height = input_image->height;
-    output_image->data = (unsigned char*)malloc(input_image->width * input_image->height * sizeof(unsigned char));
-    // Generate histogram
-    skip_histogram(input_image, histograms);
-    // For each histogram
-    for (unsigned int t_x = 0; t_x < TILES_X; ++t_x) {
-        for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
-            // find the min and max contrast values
-            unsigned int min_c = PIXEL_RANGE-1;
-            for (int i = 0; i < PIXEL_RANGE; ++i) {
-                if (histograms[t_x][t_y].histogram[i]) {
-                    min_c = i;
-                    break;
-                }
-            }
-            // min_c correpsonds to contrast that was clipped by contrast limit, so return that
-            unsigned int pixels_over = 0;
-            for (int i = 0; i < PIXEL_RANGE; ++i) {
-                histograms[t_x][t_y].limited_histogram[i] = histograms[t_x][t_y].histogram[i] - min_c;
-                if (histograms[t_x][t_y].limited_histogram[i] >= ABSOLUTE_CONTRAST_LIMIT) {
-                    pixels_over++;
-                    break;
-                }
-            }
-            const unsigned int limited_contrast = (min_c * PIXEL_RANGE)/pixels_over;
-            for (int i = 0; i < PIXEL_RANGE; ++i) {
-                if (histograms[t_x][t_y].limited_histogram[i] >= ABSOLUTE_CONTRAST_LIMIT) {
-                    histograms[t_x][t_y].limited_histogram[i] += limited_contrast;
-                    break;
-                }
-            }
-        }
-    }
-    skip_cumulative_histogram(TILES_X, TILES_Y, histograms);
-    for (unsigned int t_x = 0; t_x < TILES_X; ++t_x) {
-        for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
-            // Find min again
-            unsigned int min_c = PIXEL_RANGE-1;
-            for (int i = 0; i < PIXEL_RANGE; ++i) {
-                if (histograms[t_x][t_y].histogram[i]) {
-                    min_c = i;
-                    break;
-                }
-            }
-            // Calculate unequalised histogram value
-            for (unsigned int i = 0; i < PIXEL_RANGE; ++i) {
-                float t = roundf(((histograms[t_x][t_y].cumulative_histogram[i] + min_c) / (float)(TILE_PIXELS + (min_c * PIXEL_RANGE))) * (float)PIXEL_MAX);
-                t = t > PIXEL_MAX ? PIXEL_MAX : t; // indices before cdf_min overflow
-                // Clamp value to bounds
-                histograms[t_x][t_y].equalised_histogram[i] = (unsigned char)t;  
-            }
-        }
-    }
-    skip_interpolate(input_image, histograms, output_image);
 }
 
 int getSkipUsed() {
