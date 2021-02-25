@@ -179,20 +179,27 @@ int main(int argc, char **argv)
         // Run 1 or many times
         memset(&timing_log, 0, sizeof(Runtimes));
         for (int runs = 0; runs < TOTAL_RUNS; ++runs) {
+            if (TOTAL_RUNS > 1)
+                printf("\r%d/%d", runs + 1, TOTAL_RUNS);
             memset(&output_image, 0, sizeof(Image));
             // Run Adaptive Histogram algorithm
             CUDA_CALL(cudaEventRecord(startT));
+            CUDA_CALL(cudaEventSynchronize(startT));
             switch (config.mode) {
             case CPU:
                 {
                     cpu_begin(&input_image);
                     CUDA_CALL(cudaEventRecord(initT));
+                    CUDA_CALL(cudaEventSynchronize(initT));
                     most_common_contrast = cpu_stage1();
                     CUDA_CALL(cudaEventRecord(stage1T));
+                    CUDA_CALL(cudaEventSynchronize(stage1T));
                     cpu_stage2();
                     CUDA_CALL(cudaEventRecord(stage2T));
+                    CUDA_CALL(cudaEventSynchronize(stage2T));
                     cpu_stage3();
                     CUDA_CALL(cudaEventRecord(stage3T));
+                    CUDA_CALL(cudaEventSynchronize(stage3T));
                     cpu_end(&output_image);
                 }
                 break;
@@ -200,12 +207,16 @@ int main(int argc, char **argv)
                 {
                     openmp_begin(&input_image);
                     CUDA_CALL(cudaEventRecord(initT));
+                    CUDA_CALL(cudaEventSynchronize(initT));
                     most_common_contrast = openmp_stage1();
                     CUDA_CALL(cudaEventRecord(stage1T));
+                    CUDA_CALL(cudaEventSynchronize(stage1T));
                     openmp_stage2();
                     CUDA_CALL(cudaEventRecord(stage2T));
+                    CUDA_CALL(cudaEventSynchronize(stage2T));
                     openmp_stage3();
                     CUDA_CALL(cudaEventRecord(stage3T));
+                    CUDA_CALL(cudaEventSynchronize(stage3T));
                     openmp_end(&output_image);
                 }
                 break;
@@ -214,22 +225,26 @@ int main(int argc, char **argv)
                     cuda_begin(&input_image);
                     CUDA_CHECK("cuda_begin()");
                     CUDA_CALL(cudaEventRecord(initT));
+                    CUDA_CALL(cudaEventSynchronize(initT));
                     most_common_contrast = cuda_stage1();
                     CUDA_CHECK("cuda_stage1()");
                     CUDA_CALL(cudaEventRecord(stage1T));
+                    CUDA_CALL(cudaEventSynchronize(stage1T));
                     cuda_stage2();
                     CUDA_CHECK("cuda_stage2()");
                     CUDA_CALL(cudaEventRecord(stage2T));
+                    CUDA_CALL(cudaEventSynchronize(stage2T));
                     cuda_stage3();
                     CUDA_CHECK("cuda_stage3()");
                     CUDA_CALL(cudaEventRecord(stage3T));
+                    CUDA_CALL(cudaEventSynchronize(stage3T));
                     cuda_end(&output_image);
                 }
                 break;
             }
             CUDA_CALL(cudaEventRecord(stopT));
+            CUDA_CALL(cudaEventSynchronize(stopT));
             // Sum timing info
-            cudaEventSynchronize(stopT);
             float milliseconds = 0;
             CUDA_CALL(cudaEventElapsedTime(&milliseconds, startT, initT));
             timing_log.init += milliseconds;
@@ -298,7 +313,7 @@ int main(int argc, char **argv)
 
     // Validate and report    
     {
-        printf("Validation Status: \n");
+        printf("\rValidation Status: \n");
         printf("\tImage width: %s\n", validation_image.width == output_image.width ? "Pass" : "Fail");
         printf("\tImage height: %s\n", validation_image.height == output_image.height ? "Pass" : "Fail");
         int v_size = validation_image.width * validation_image.height;

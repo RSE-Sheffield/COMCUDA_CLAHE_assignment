@@ -17,7 +17,7 @@
 /**
  * Number of runs to complete for benchmarking
  */
-#define BENCHMARK_RUNS 1000
+#define BENCHMARK_RUNS 100
 
 // Dependent config, do not change values hereafter
 // f values are to save implicit/explicit casts in the code
