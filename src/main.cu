@@ -166,10 +166,7 @@ int main(int argc, char **argv)
     // Location to store result of stage1
     int most_common_contrast = -1;
     const int TOTAL_RUNS = config.benchmark ? BENCHMARK_RUNS : 1;
-    // Perform reverse if required
-    if (config.reverse) {
-        reverse_algorithm(&input_image, &output_image);
-    } else {
+    {
         //Init for run  
         cudaEvent_t startT, initT, stage1T, stage2T, stage3T, stopT;
         CUDA_CALL(cudaEventCreate(&startT));
@@ -300,7 +297,7 @@ int main(int argc, char **argv)
     
 
     // Validate and report    
-    if (!config.reverse) {
+    {
         printf("Validation Status: \n");
         printf("\tImage width: %s\n", validation_image.width == output_image.width ? "Pass" : "Fail");
         printf("\tImage height: %s\n", validation_image.height == output_image.height ? "Pass" : "Fail");
@@ -344,18 +341,16 @@ int main(int argc, char **argv)
 
 
     // Report timing information    
-    if (!config.reverse) {
-        printf("%s Average execution timing from %d runs\n", mode_to_string(config.mode), TOTAL_RUNS);
+    printf("%s Average execution timing from %d runs\n", mode_to_string(config.mode), TOTAL_RUNS);
 #ifdef _DEBUG
-        printf("Code built as DEBUG, timing results are invalid!\n");
+    printf("Code built as DEBUG, timing results are invalid!\n");
 #endif
-        printf("Init: %.3fms\n", timing_log.init);
-        printf("Stage 1: %.3fms%s\n", timing_log.stage1, getStage1SkipUsed() ? " (helper method used, time invalid)" : "");
-        printf("Stage 2: %.3fms%s\n", timing_log.stage2, getStage2SkipUsed() ? " (helper method used, time invalid)" : "");
-        printf("Stage 3: %.3fms%s\n", timing_log.stage3, getStage3SkipUsed() ? " (helper method used, time invalid)" : "");
-        printf("Free: %.3fms\n", timing_log.cleanup);
-        printf("Total: %.3fms%s\n", timing_log.total, getSkipUsed() ? " (helper method used, time invalid)" : "");
-    }
+    printf("Init: %.3fms\n", timing_log.init);
+    printf("Stage 1: %.3fms%s\n", timing_log.stage1, getStage1SkipUsed() ? " (helper method used, time invalid)" : "");
+    printf("Stage 2: %.3fms%s\n", timing_log.stage2, getStage2SkipUsed() ? " (helper method used, time invalid)" : "");
+    printf("Stage 3: %.3fms%s\n", timing_log.stage3, getStage3SkipUsed() ? " (helper method used, time invalid)" : "");
+    printf("Free: %.3fms\n", timing_log.cleanup);
+    printf("Total: %.3fms%s\n", timing_log.total, getSkipUsed() ? " (helper method used, time invalid)" : "");
 
     // Cleanup
     cudaDeviceReset();
@@ -436,15 +431,7 @@ void parse_args(int argc, char **argv, Config *config) {
             memcpy(config->output_file, argv[i], arg_len);
             continue;
         }
-        if (!strcmp("--reverse", t_arg) || !strcmp("--invert", t_arg)|| !strcmp("-r", t_arg)) {
-            config->reverse = 1;
-            continue;
-        }
         fprintf(stderr, "Unexpected optional argument: %s\n", argv[i]);
-        print_help(argv[0]);
-    }
-    if (config->benchmark && config->reverse) {
-        fprintf(stderr, "Runtime arguments --bench and --reverse are incompatible, use one at a time.\n");
         print_help(argv[0]);
     }
     if (t_arg) 
@@ -460,7 +447,6 @@ void print_help(const char *program_name) {
     fprintf(stderr, "Optional Arguments:\n");
     fprintf(stderr, line_fmt, "<output image>", "Output image, requires .png filetype");
     fprintf(stderr, line_fmt, "-b, --bench", "Enable benchmark mode");
-    fprintf(stderr, line_fmt, "-r, --reverse", "Perform reverse operation on input image (requires output_image set)");
 
     exit(EXIT_FAILURE);
 }

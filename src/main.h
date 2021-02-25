@@ -23,13 +23,8 @@ struct Config {
      * Treated as boolean, program will operate in benchmark mode
      * This repeats the algorithm multiple times and returns an average time
      * It may also warn about incorrect settings
-     * @TODO Actually implement this mode
      */
     unsigned char benchmark;
-    /**
-     * Treated as boolean, program will harm the contrast of the input image
-     */
-    unsigned char reverse;
 }; typedef struct Config Config;
 /**
  * This structure represents a multi-channel image

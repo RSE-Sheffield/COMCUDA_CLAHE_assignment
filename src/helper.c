@@ -432,16 +432,6 @@ void skip_interpolate(const Image *input_image, Histogram **histograms, Image *o
     skip_interpolate_used++;
 }
 
-void reverse_algorithm(const Image *input_image, Image *output_image) {
-    // Setup output image
-    *output_image = *input_image;
-    output_image->data = malloc(input_image->height * input_image->width * sizeof(unsigned char));
-    // Divide all contrast values by 1.3 and + 29
-    for (int i = 0; i < input_image->height * input_image->width; ++i) {
-        output_image->data[i] = 64 + (unsigned char)(input_image->data[i] / 2);
-    }
-}
-
 int getSkipUsed() {
     return skip_histogram_used + skip_limited_histogram_used + skip_cumulative_histogram_used + skip_equalised_histogram_used + skip_interpolate_used;
 }

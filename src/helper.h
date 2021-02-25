@@ -46,13 +46,6 @@ void validate_interpolate(const Image *input_image, Histogram **histograms, Imag
 void skip_interpolate(const Image *input_image, Histogram **histograms, Image *output_image);
 
 ///
-/// Reverse utility - This perform an approximate reverse of the algorithm, to create viable input images
-/// This probably needs more testing, but it's not integral to the assignment
-///
-
-void reverse_algorithm(const Image *input_image, Image *output_image);
-
-///
 /// These are used for reporting whether timing is invalid due to helper use
 ///
 ///
