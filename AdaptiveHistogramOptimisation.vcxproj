@@ -149,6 +149,7 @@
     <CudaCompile>
       <Include>$(ProjectDir)</Include>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
