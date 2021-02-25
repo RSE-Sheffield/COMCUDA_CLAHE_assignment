@@ -1,28 +1,97 @@
-# Change the example variable to build a different source module (e.g. hello/example1/example4)
-EXAMPLE=AdaptiveHistogramOptimisation
+# Makefile Variables #
+# ------------------ #
 
-# Makefile variables 
-# Add extra targets to OBJ with space separator e.g. If there is as source file random.c then add random.o to OBJ)
-# Add any additional dependencies (header files) to DEPS. e.g. if there is a header file random.h required by your source modules then add this to DEPS.
-CC=gcc
-CCFLAGS= -O3 -fopenmp -I. -Isrc
-NVCC=nvcc
-NVCC_FLAGS= -gencode arch=compute_35,code=compute_35 -I. -Isrc
-OBJ=main.o cpu.o openmp.o cuda.o helper.o
+# The name of the generated executable file
+EXECUTABLE=AdaptiveHistogramOptimisation
+
+# Directory names used for incremental build files, executable files, and the executable type (release/debug)
+BUILD_DIR := build
+BIN_DIR := bin
+RELEASE_DIR := release
+DEBUG_DIR := debug
+
+# C and CUDA source files to be compiled
+# Add any new source files you create to be compiled and linked into the executables to the list
+SRCS=src/main.cu src/helper.c src/cpu.c src/openmp.c src/cuda.cu 
+
+# Header files which if changed will result in a rebuild.
+# Add any additional header files you create to this list for rebuild support.
 DEPS=src/common.h src/config.h src/cpu.h src/cuda.cuh src/helper.h src/main.h src/openmp.h external/stb_image.h external/stb_image_write.h
 
-# Build rule for object files ($@ is left hand side of rule, $< is first item from the right hand side of rule)
-%.o : src/%.cu $(DEPS)
-	$(NVCC) -c -o $@ $< $(NVCC_FLAGS) $(addprefix -Xcompiler ,$(CCFLAGS))
-  
-%.o : src/%.c $(DEPS)
-	$(CC) -c -o $@ $< $(CCFLAGS)
+# Generate the list of object files from the list of source files.
+OBJS=$(addsuffix .o,$(SRCS))
 
-# Make example ($^ is all items from right hand side of the rule)
-$(EXAMPLE) : $(OBJ)
-	$(NVCC) -o $@ $^ $(NVCC_FLAGS) $(addprefix -Xcompiler ,$(CCFLAGS))
+# Select the host C compiler and provide compiler options, for all builds, release builds and debug builds.
+CC=gcc
+CCFLAGS= -fopenmp -I. -Isrc -Wall
+CCFLAGS_RELEASE= -O3 -DNDEBUG
+# -O1 is passed to gcc for debug builds to allow linking via nvcc with inline methods in a C host compiler. This pervents debugging of the inline methods unfortunatley
+CCFLAGS_DEBUG= -g -O1 -DDEBUG
 
-# PHONY prevents make from doing something with a filename called clean
-.PHONY : clean
+# Select the device NVCC compiler and provide compiler options, for all builds, release builds and debug builds.
+# Use the CUDA_ARCH variable to control the compute capabiltiy to build for.
+CUDA_ARCH=61
+NVCC=nvcc
+NVCCFLAGS= -gencode arch=compute_$(CUDA_ARCH),code=sm_$(CUDA_ARCH) -gencode arch=compute_$(CUDA_ARCH),code=compute_$(CUDA_ARCH) -I. -Isrc -Wno-deprecated-gpu-targets
+NVCCFLAGS_RELEASE= -lineinfo -O3 -DNDEBUG
+NVCCFLAGS_DEBUG= -g -G -DDEBUG
+
+# Build rules #
+# ----------- #
+
+# Default build rule - build the release executable
+all: release
+
+# Build the release mode executbale (and ensure directories exist)
+release: $(BIN_DIR)/$(RELEASE_DIR)/$(EXECUTABLE)
+
+# Build the debug mode executabale (and ensure directories exist)
+debug: $(BIN_DIR)/$(DEBUG_DIR)/$(EXECUTABLE)
+
+# Makefile rules using special Makefile variables:
+#   $@ is left hand side of rule
+#   $< is first item from the right hand side of rule
+#   $^ is all items from right hand side of the rule
+
+# Compile CUDA object files for release builds
+$(BUILD_DIR)/$(RELEASE_DIR)/%.cu.o : %.cu $(DEPS) $(MAKEFILE_LIST)
+	@mkdir -p $(dir $@)
+	$(NVCC) -c -o $@ $< $(NVCCFLAGS) $(NVCCFLAGS_RELEASE) $(addprefix -Xcompiler ,$(CCFLAGS)) $(addprefix -Xcompiler ,$(CCFLAGS_RELEASE))
+# Compiler C object files for release builds
+$(BUILD_DIR)/$(RELEASE_DIR)/%.c.o : %.c $(DEPS) $(MAKEFILE_LIST)
+	@mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_RELEASE) 
+# Link the executable for release builds
+$(BIN_DIR)/$(RELEASE_DIR)/$(EXECUTABLE) : $(addprefix $(BUILD_DIR)/$(RELEASE_DIR)/,$(OBJS))
+	@mkdir -p $(dir $@)
+	$(NVCC) -o $@ $^ $(NVCCFLAGS) $(NVCCFLAGS_RELEASE) $(addprefix -Xcompiler ,$(CCFLAGS)) $(addprefix -Xcompiler ,$(CCFLAGS_RELEASE))
+
+# Rules for debug objectss / executbales. Note that these are duplicates with minor changes.
+$(BUILD_DIR)/$(DEBUG_DIR)/%.cu.o : %.cu $(DEPS) $(MAKEFILE_LIST)
+	@mkdir -p $(dir $@)
+	$(NVCC) -c -o $@ $< $(NVCCFLAGS) $(NVCCFLAGS_DEBUG) $(addprefix -Xcompiler ,$(CCFLAGS)) $(addprefix -Xcompiler ,$(CCFLAGS_DEBUG))
+# Compiler C object files for debug builds
+$(BUILD_DIR)/$(DEBUG_DIR)/%.c.o : %.c $(DEPS) $(MAKEFILE_LIST)
+	@mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CCFLAGS) $(CCFLAGS_DEBUG)
+# Link the executable for debug builds
+$(BIN_DIR)/$(DEBUG_DIR)/$(EXECUTABLE) : $(addprefix $(BUILD_DIR)/$(DEBUG_DIR)/,$(OBJS))
+	@mkdir -p $(dir $@)
+	$(NVCC) -o $@ $^ $(NVCCFLAGS) $(NVCCFLAGS_DEBUG) $(addprefix -Xcompiler ,$(CCFLAGS)) $(addprefix -Xcompiler ,$(CCFLAGS_DEBUG))
+
+
+# PHONY rules do not generate files with the same name as the rule.
+.PHONY : all release debug clean help
+# Clean generated files.
 clean:
-	rm -rf $(EXAMPLE) $(OBJ)
+	@echo "clean"
+	@rm -rf $(BIN_DIR) 
+	@rm -rf $(BUILD_DIR) 
+# Provide usage instructions
+help: 
+	@echo " Usage:"
+	@echo "   make help       Shows this help documentation"
+	@echo "   make all        Build the default configuraiton (release)"
+	@echo "   make release    Build the release executable ($(BIN_DIR)/$(RELEASE_DIR)/$(EXECUTABLE)) "
+	@echo "   make debug      Build the release executable ($(BIN_DIR)/$(DEBUG_DIR)/$(EXECUTABLE)) "
+	@echo "   make clean      Clean the build and bin directories"

@@ -193,3 +193,5 @@ $RECYCLE.BIN/
 *.out
 *.app
 
+# PNG files 
+*.png
