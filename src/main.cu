@@ -342,6 +342,14 @@ int main(int argc, char **argv)
 
     // Report timing information    
     printf("%s Average execution timing from %d runs\n", mode_to_string(config.mode), TOTAL_RUNS);
+    if (config.mode == CUDA) {
+        int device_id = 0;
+        CUDA_CALL(cudaGetDevice(&device_id));
+        cudaDeviceProp props;
+        memset(&props, 0, sizeof(cudaDeviceProp));
+        CUDA_CALL(cudaGetDeviceProperties(&props, device_id));
+        printf("Using GPU: %s\n", props.name);
+    }
 #ifdef _DEBUG
     printf("Code built as DEBUG, timing results are invalid!\n");
 #endif
