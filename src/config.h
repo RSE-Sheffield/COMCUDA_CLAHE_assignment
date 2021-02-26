@@ -6,7 +6,7 @@
 /**
  * Dimensions of the tiles that the image is subdivided into
  */
-#define TILE_SIZE 128
+#define TILE_SIZE 32
 #define RELATIVE_CONTRAST_LIMIT 0.015f
 /**
  * The number of values a pixel can take
