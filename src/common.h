@@ -21,26 +21,26 @@ struct Image {
 };
 typedef struct Image Image;
 /**
- * This structure represents a collection of histograms used throughout the algorithm
+ * This structure represents a histograms used throughout the algorithm
+ * The type is unsigned int
  */
-struct Histogram {
+struct Histogram_uint {
     /**
-     *
+     * PIXEL_RANGE bins for histogram data
      */
     unsigned int histogram[PIXEL_RANGE];
-    /**
-     *
-     */
-    unsigned int limited_histogram[PIXEL_RANGE];
-    /**
-     *
-     */
-    unsigned int cumulative_histogram[PIXEL_RANGE];
-    /**
-     *
-     */
-    unsigned char equalised_histogram[PIXEL_RANGE];
 };
-typedef struct Histogram Histogram;
+typedef struct Histogram_uint Histogram_uint;
+/**
+ * This structure represents a histograms used throughout the algorithm
+ * The type is unsigned char
+ */
+struct Histogram_uchar {
+    /**
+     * PIXEL_RANGE bins for histogram data
+     */
+    unsigned char histogram[PIXEL_RANGE];
+};
+typedef struct Histogram_uchar Histogram_uchar;
 
 #endif  // __common_h__

@@ -115,19 +115,25 @@ int main(int argc, char **argv)
         validation_image.data = (unsigned char *)malloc(input_image.width * input_image.height * sizeof(unsigned char));
         const unsigned int TILES_X = validation_image.width / TILE_SIZE;
         const unsigned int TILES_Y = validation_image.height / TILE_SIZE;
-        // Allocate  histogram
-        Histogram **histograms = (Histogram **)malloc(TILES_X * sizeof(Histogram*));
-        histograms[0] = (Histogram *)malloc(TILES_X * TILES_Y * sizeof(Histogram));
-        memset(histograms[0],0, TILES_X * TILES_Y * sizeof(Histogram));
+        // Allocate  histograms
+        Histogram_uint **histograms_a = (Histogram_uint **)malloc(TILES_X * sizeof(Histogram_uint*));
+        histograms_a[0] = (Histogram_uint*)malloc(TILES_X * TILES_Y * sizeof(Histogram_uint));
+        memset(histograms_a[0],0, TILES_X * TILES_Y * sizeof(Histogram_uint));
+        Histogram_uint** histograms_b = (Histogram_uint**)malloc(TILES_X * sizeof(Histogram_uint*));
+        histograms_b[0] = (Histogram_uint*)malloc(TILES_X * TILES_Y * sizeof(Histogram_uint));
+        memset(histograms_b[0], 0, TILES_X* TILES_Y * sizeof(Histogram_uint));
+        Histogram_uchar** histograms_c = (Histogram_uchar**)malloc(TILES_X * sizeof(Histogram_uchar*));
+        histograms_c[0] = (Histogram_uchar*)malloc(TILES_X * TILES_Y * sizeof(Histogram_uchar));
+        memset(histograms_c[0], 0, TILES_X* TILES_Y * sizeof(Histogram_uchar));
         for (unsigned int t_x = 1; t_x < TILES_X; ++t_x) {
-            histograms[t_x] = histograms[0] + t_x * TILES_Y;         
+            histograms_a[t_x] = histograms_a[0] + t_x * TILES_Y;
+            histograms_b[t_x] = histograms_b[0] + t_x * TILES_Y;
+            histograms_c[t_x] = histograms_c[0] + t_x * TILES_Y;
         }
         // Run algorithm
-        skip_histogram(&input_image, histograms);
-        skip_limited_histogram(TILES_X, TILES_Y, histograms);
-        skip_cumulative_histogram(TILES_X, TILES_Y, histograms);
-        skip_equalised_histogram(TILES_X, TILES_Y, histograms);
-        skip_interpolate(&input_image, histograms, &validation_image);
+        skip_histogram(&input_image, histograms_a);
+        skip_equalised_histogram(TILES_X, TILES_Y, histograms_a, histograms_c);
+        skip_interpolate(&input_image, histograms_c, &validation_image);
         // Find all contrast values with max (small chance multiple contrast values share max)
         {
             for (int i = 0; i < PIXEL_RANGE; ++i)
@@ -157,8 +163,12 @@ int main(int argc, char **argv)
             }
         }
         // Free temporary resources
-        free(histograms[0]);
-        free(histograms);
+        free(histograms_a[0]);
+        free(histograms_a);
+        free(histograms_b[0]);
+        free(histograms_b);
+        free(histograms_c[0]);
+        free(histograms_c);
     }
        
     Image output_image;
