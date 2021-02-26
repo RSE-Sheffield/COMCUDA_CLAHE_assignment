@@ -104,6 +104,7 @@ void validate_cumulative_histogram(unsigned int TILES_X, unsigned int TILES_Y, H
 void skip_cumulative_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histogram **histograms);
 /**
  * Validates whether each histograms[][]->equalised_histogram of stage 2 has been calculated correctly
+ * from the histograms[][]->limited_histogram
  * Success or failure will be printed to the console
  *
  * @param TILES_X The number of histograms in the first dimension of test_histograms
@@ -130,6 +131,20 @@ void validate_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Hi
  */
 void skip_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histogram **histograms);
 
+/**
+ * Validates whether each histograms[][]->equalised_histogram of stage 2 has been calculated correctly
+ * from the stage 1 histograms
+ * Success or failure will be printed to the console
+ *
+ * @param TILES_X The number of histograms in the first dimension of test_histograms
+ *        Also known as, the horizontal number of tiles in the image (input_image->width / TILE_SIZE)
+ * @param TILES_Y The number of histograms in the second dimension of test_histograms
+ *        Also known as, the vertical number of tiles in the image (input_image->height / TILE_SIZE)
+ * @param test_histograms Host pointer to a 2-dimensional array of limited histograms to be checked
+ *
+ * @note If test_histograms does not match the same memory layout as cpu.c, this may cause an access violation
+ */
+void validate_stage2_histograms(unsigned int TILES_X, unsigned int TILES_Y, Histogram** test_histograms);
 ///
 /// Stage 3 helpers
 ///
@@ -166,6 +181,10 @@ int getStage3SkipUsed();
 
 #ifdef __cplusplus
 }
+#endif
+
+#if defined(_DEBUG) || defined(DEBUG)
+#define VALIDATION
 #endif
 
 #endif  // __helper_h__

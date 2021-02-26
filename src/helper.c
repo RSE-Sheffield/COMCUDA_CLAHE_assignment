@@ -331,6 +331,14 @@ void skip_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histog
     skip_equalised_histogram_used++;
 }
 
+
+void validate_stage2_histograms(unsigned int TILES_X, unsigned int TILES_Y, Histogram** test_histograms) {
+    // Call all 3 validate/skip functions
+    validate_limited_histogram(TILES_X, TILES_Y, test_histograms);
+    validate_cumulative_histogram(TILES_X, TILES_Y, test_histograms);
+    validate_equalised_histogram(TILES_X, TILES_Y, test_histograms);
+}
+
 int skip_interpolate_used = -1;
 void validate_interpolate(const Image *input_image, Histogram **histograms, Image *test_output_image) {
     // Allocate, copy and generate our own internal output image
