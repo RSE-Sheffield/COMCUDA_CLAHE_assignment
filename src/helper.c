@@ -322,7 +322,7 @@ void skip_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histog
             }
             // Calculate equalised histogram value
             for (unsigned int i = 0; i < PIXEL_RANGE; ++i) {
-                float t = roundf(((cumulative_histograms[t_x][t_y].histogram[i] - cdf_min) / (float)(TILE_PIXELS - lost_contrast)) * (float)PIXEL_MAX);
+                float t = roundf((((cumulative_histograms[t_x][t_y].histogram[i] - cdf_min) / (float)(TILE_PIXELS - lost_contrast)) * (float)(PIXEL_RANGE - 2)) + 1);
                 t = t > PIXEL_MAX ? PIXEL_MAX : t; // indices before cdf_min overflow
                 // Clamp value to bounds
                 equalisied_histograms[t_x][t_y].histogram[i] = (unsigned char)t;
