@@ -240,8 +240,8 @@ void skip_cumulative_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histo
         for (unsigned int t_y = 0; t_y < TILES_Y; ++t_y) {
             // Find cdf_min and convert histogram to cumulative
             // This is essentially a scan
-            // unsigned int cdf_min = 0;
             cumulative_histograms[t_x][t_y].histogram[0] = limited_histograms[t_x][t_y].histogram[0];
+            // unsigned int cdf_min = cumulative_histograms[t_x][t_y].histogram[0];
             for (unsigned int i = 1; i < PIXEL_RANGE; ++i) {
                 cumulative_histograms[t_x][t_y].histogram[i] = cumulative_histograms[t_x][t_y].histogram[i-1] + limited_histograms[t_x][t_y].histogram[i];
                 // if (histograms[t_x][t_y].cumulative_histogram[i-1] == 0 && histograms[t_x][t_y].cumulative_histogram[i] != 0) { // Second half of condition is redundant in serial
@@ -313,7 +313,7 @@ void skip_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histog
             }
             const int lost_contrast = (extra_contrast > PIXEL_RANGE) ? (extra_contrast % PIXEL_RANGE) : 0;
             // Find cdf_min (This requires cumulative histogram)
-            unsigned int cdf_min = 0;
+            unsigned int cdf_min = cumulative_histograms[t_x][t_y].histogram[0];
             for (unsigned int i = 1; i < PIXEL_RANGE; ++i) {
                 if (cumulative_histograms[t_x][t_y].histogram[i-1] == 0 && cumulative_histograms[t_x][t_y].histogram[i] != 0) { // Second half of condition is redundant in serial
                     cdf_min = cumulative_histograms[t_x][t_y].histogram[i];

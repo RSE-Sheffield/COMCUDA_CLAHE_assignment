@@ -187,8 +187,8 @@ void cpu_stage2() {
                 }
                 // Find cdf_min and convert histogram to cumulative
                 // This is essentially a scan
-                unsigned int cdf_min = 0;
                 cpu_cumulative_histograms[t_x][t_y].histogram[0] = cpu_limited_histograms[t_x][t_y].histogram[0];
+                unsigned int cdf_min = cpu_cumulative_histograms[t_x][t_y].histogram[0];
                 for (unsigned int i = 1; i < PIXEL_RANGE; ++i) {
                     cpu_cumulative_histograms[t_x][t_y].histogram[i] = cpu_cumulative_histograms[t_x][t_y].histogram[i-1] + cpu_limited_histograms[t_x][t_y].histogram[i];
                     if (cpu_cumulative_histograms[t_x][t_y].histogram[i-1] == 0 && cpu_cumulative_histograms[t_x][t_y].histogram[i] != 0) { // Second half of condition is redundant in serial
