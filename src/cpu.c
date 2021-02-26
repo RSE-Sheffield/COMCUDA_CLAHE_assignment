@@ -53,9 +53,13 @@ void cpu_begin(const Image *input_image) {
 
     // Allocate histogram per tile
     {
+        // Allocate memory for the first dimension of the array
         cpu_histograms = (Histogram **)malloc(cpu_TILES_X * sizeof(Histogram*));
+        // Allocate memory for the second dimension of the array
         cpu_histograms[0] = (Histogram *)malloc(cpu_TILES_X * cpu_TILES_Y * sizeof(Histogram));
+        // Memset the second dimension's data to 0, ready for histogram building
         memset(cpu_histograms[0],0, cpu_TILES_X * cpu_TILES_Y * sizeof(Histogram));
+        // Build the first dimension of the array by mapping the corresponding indices of the second dimension
         for (unsigned int t_x = 1; t_x < cpu_TILES_X; ++t_x) {
             cpu_histograms[t_x] = cpu_histograms[0] + t_x * cpu_TILES_Y;         
         } 
