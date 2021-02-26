@@ -220,9 +220,9 @@ void cpu_stage3() {
 }
 void cpu_end(Image *output_image) {
     // Store return value
-    *output_image = cpu_output_image;
-    output_image->data = (unsigned char *)malloc(output_image->width * output_image->height);
-    memcpy(output_image->data, cpu_output_image.data, output_image->width * output_image->height);
+    output_image->width = cpu_output_image.width;
+    output_image->height = cpu_output_image.height;
+    memcpy(output_image->data, cpu_output_image.data, output_image->width * output_image->height * sizeof(unsigned char));
     // Release allocations
     free(cpu_output_image.data);
     free(cpu_input_image.data);

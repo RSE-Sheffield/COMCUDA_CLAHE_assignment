@@ -182,6 +182,7 @@ int main(int argc, char **argv)
             if (TOTAL_RUNS > 1)
                 printf("\r%d/%d", runs + 1, TOTAL_RUNS);
             memset(&output_image, 0, sizeof(Image));
+            output_image.data = (unsigned char*)malloc(input_image.width * input_image.height);
             // Run Adaptive Histogram algorithm
             CUDA_CALL(cudaEventRecord(startT));
             CUDA_CALL(cudaEventSynchronize(startT));

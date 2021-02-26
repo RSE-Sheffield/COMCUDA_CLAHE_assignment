@@ -28,7 +28,7 @@ void cuda_stage3();
 /**
  * The cleanup and return function for the CPU CLAHE implemention
  * Memory should be freed, and the final image copied to output_image
- * @param output_image Pointer to a struct to store the final image to be output
+ * @param output_image Pointer to a struct to store the final image to be output, output_image->data is pre-allocated
  */
 void cuda_end(Image *output_image);
 
