@@ -177,10 +177,9 @@ void cpu_stage2() {
                         cpu_limited_histograms[t_x][t_y].histogram[i] = cpu_histograms[t_x][t_y].histogram[i];
                     }
                 }
-                int lost_contrast = 0;
-                if (extra_contrast > PIXEL_RANGE) {
-                    const int bonus_contrast = extra_contrast / PIXEL_RANGE;  // integer division is fine here
-                    lost_contrast = extra_contrast % PIXEL_RANGE;
+                const int bonus_contrast = extra_contrast / PIXEL_RANGE;  // integer division is fine here
+                const int lost_contrast = extra_contrast % PIXEL_RANGE;
+                if (bonus_contrast) {
                     for (int i = 0; i < PIXEL_RANGE; ++i) {
                         cpu_limited_histograms[t_x][t_y].histogram[i] += bonus_contrast;
                     }

@@ -311,7 +311,7 @@ void skip_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Histog
                     extra_contrast += histograms[t_x][t_y].histogram[i] - ABSOLUTE_CONTRAST_LIMIT;
                 }
             }
-            const int lost_contrast = (extra_contrast > PIXEL_RANGE) ? (extra_contrast % PIXEL_RANGE) : 0;
+            const int lost_contrast = extra_contrast % PIXEL_RANGE;
             // Find cdf_min (This requires cumulative histogram)
             unsigned int cdf_min = cumulative_histograms[t_x][t_y].histogram[0];
             for (unsigned int i = 1; i < PIXEL_RANGE; ++i) {
