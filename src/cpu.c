@@ -146,8 +146,8 @@ int cpu_stage1() {
         }
     }
     // Find the most common contrast value
-    unsigned long long max_c = 0;
-    int max_i = -1; // Init with an invalid value
+    unsigned long long max_c = 0;  // Max count of pixels with a specific contrast value
+    int max_i = -1; // Index (contrast value) of the histogram bin with max_c, init with an invalid value
     for (int i = 0; i < PIXEL_RANGE; ++i) {
         if (max_c < global_histogram[i]) {
             max_c = global_histogram[i];

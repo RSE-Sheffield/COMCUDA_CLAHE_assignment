@@ -83,8 +83,8 @@ void validate_histogram(const Image *input_image, Histogram_uint** test_histogra
         }
         // Find max value
         // Find the most common contrast value
-        unsigned long long max_c = 0;
-        int max_i = 0;
+        unsigned long long max_c = 0;  // Max count of pixels with a specific contrast value
+        int max_i = 0;  // Index (contrast value) of the histogram bin with max_c
         for (int i = 0; i < PIXEL_RANGE; ++i) {
             if (max_c < global_histogram[i]) {
                 max_c = global_histogram[i];
