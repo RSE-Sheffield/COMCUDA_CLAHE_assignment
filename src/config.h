@@ -24,7 +24,7 @@
 // Some uses may ensure floating point division, be careful if replacing them
 #define TILE_SIZEf ((float)TILE_SIZE)
 #define HALF_TILE_SIZEf (TILE_SIZE / 2.0f)
-#define HALF_TILE_SIZE ((unsigned int)round(HALF_TILE_SIZEf))
+#define HALF_TILE_SIZE ((unsigned int)roundf(HALF_TILE_SIZEf))
 #define TILE_PIXELS ((int)(TILE_SIZE * TILE_SIZE))
 #define ABSOLUTE_CONTRAST_LIMIT ((int)(TILE_PIXELS * RELATIVE_CONTRAST_LIMIT))
 #define PIXEL_MAX (PIXEL_RANGE - 1)
