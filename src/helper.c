@@ -7,6 +7,11 @@
 
 #include "config.h"
 
+#define CONSOLE_RED "\x1b[91m"
+#define CONSOLE_GREEN "\x1b[92m"
+#define CONSOLE_YELLOW "\x1b[93m"
+#define CONSOLE_RESET "\x1b[39m"
+
 ///
 /// Utility Methods
 ///
@@ -65,9 +70,9 @@ void validate_histogram(const Image *input_image, Histogram_uint** test_histogra
         }
     }
     if (bad_tiles) {
-        fprintf(stderr, "validate_histogram() found %d/%u tiles contain invalid histograms.\n", bad_tiles, TILES_X * TILES_Y);
+        fprintf(stderr, "validate_histogram() " CONSOLE_RED "found %d/%u tiles contain invalid histograms." CONSOLE_RESET "\n", bad_tiles, TILES_X * TILES_Y);
     } else {
-        fprintf(stderr, "validate_histogram() found no errors! (%u tiles were correct)\n", TILES_X * TILES_Y);
+        fprintf(stderr, "validate_histogram() " CONSOLE_GREEN "found no errors! (%u tiles were correct)" CONSOLE_RESET "\n", TILES_X * TILES_Y);
     }    
     // Find all contrast values with max (small chance multiple contrast values share max)
     int validation_most_common_contrast[PIXEL_RANGE];
@@ -105,7 +110,7 @@ void validate_histogram(const Image *input_image, Histogram_uint** test_histogra
             break;
         }
     }
-    printf("validate_histogram() Most common contrast value: %s\n", bad_contrast ? "Fail": "Pass");
+    printf("validate_histogram() Most common contrast value: %s" CONSOLE_RESET "\n", bad_contrast ? CONSOLE_RED "Fail": CONSOLE_GREEN "Pass");
     
     // Release internal histogram
     free(histograms[0]);
@@ -170,9 +175,9 @@ void validate_limited_histogram(unsigned int TILES_X, unsigned int TILES_Y, Hist
         }
     }
     if (bad_histograms) {
-        fprintf(stderr, "validate_limited_histogram() found %d/%u incorrect limited histograms.\n", bad_histograms, TILES_X * TILES_Y);
+        fprintf(stderr, "validate_limited_histogram() " CONSOLE_RED "found %d/%u incorrect limited histograms." CONSOLE_RESET "\n", bad_histograms, TILES_X * TILES_Y);
     } else {
-        fprintf(stderr, "validate_limited_histogram() found no errors! (%u limited histograms were correct)\n", TILES_X * TILES_Y);
+        fprintf(stderr, "validate_limited_histogram() " CONSOLE_GREEN "found no errors! (%u limited histograms were correct)" CONSOLE_RESET "\n", TILES_X * TILES_Y);
     }
     // Release internal histogram
     free(limited_histograms[0]);
@@ -228,9 +233,9 @@ void validate_cumulative_histogram(unsigned int TILES_X, unsigned int TILES_Y, H
         }
     }
     if (bad_histograms) {
-        fprintf(stderr, "validate_cumulative_histogram() found %d/%u incorrect cumulative histograms.\n", bad_histograms, TILES_X * TILES_Y);
+        fprintf(stderr, "validate_cumulative_histogram() " CONSOLE_RED "found %d/%u incorrect cumulative histograms." CONSOLE_RESET "\n", bad_histograms, TILES_X * TILES_Y);
     } else {
-        fprintf(stderr, "validate_cumulative_histogram() found no errors! (%u cumulative histograms were correct)\n", TILES_X * TILES_Y);
+        fprintf(stderr, "validate_cumulative_histogram() " CONSOLE_GREEN "found no errors! (%u cumulative histograms were correct)" CONSOLE_RESET "\n", TILES_X * TILES_Y);
     }
     // Release internal histogram
     free(cumulative_histograms[0]);
@@ -278,9 +283,9 @@ void validate_equalised_histogram(unsigned int TILES_X, unsigned int TILES_Y, Hi
         }
     }
     if (bad_histograms) {
-        fprintf(stderr, "validate_equalised_histogram() found %d/%u incorrect equalised histograms.\n", bad_histograms, TILES_X * TILES_Y);
+        fprintf(stderr, "validate_equalised_histogram() " CONSOLE_RED "found %d/%u incorrect equalised histograms." CONSOLE_RESET "\n", bad_histograms, TILES_X * TILES_Y);
     } else {
-        fprintf(stderr, "validate_equalised_histogram() found no errors! (%u equalised histograms were correct)\n", TILES_X * TILES_Y);
+        fprintf(stderr, "validate_equalised_histogram() " CONSOLE_GREEN "found no errors! (%u equalised histograms were correct)" CONSOLE_RESET "\n", TILES_X * TILES_Y);
     }
     // Release internal histogram
     free(equalsied_histograms[0]);
@@ -363,9 +368,9 @@ void validate_interpolate(const Image *input_image, Histogram_uchar** equalisied
         }
     }
     if (bad_pixels) {
-        fprintf(stderr, "validate_interpolate() found %d/%u incorrect pixels.\n", bad_pixels, output_image.width * output_image.height);
+        fprintf(stderr, "validate_interpolate() " CONSOLE_RED "found %d/%u incorrect pixels." CONSOLE_RESET "\n", bad_pixels, output_image.width * output_image.height);
     } else {
-        fprintf(stderr, "validate_interpolate() found no errors! (%u pixels were correct)\n", output_image.width * output_image.height);
+        fprintf(stderr, "validate_interpolate() " CONSOLE_GREEN "found no errors! (%u pixels were correct)" CONSOLE_RESET "\n", output_image.width * output_image.height);
     }
     // Release internal output image
     free(output_image.data);    
