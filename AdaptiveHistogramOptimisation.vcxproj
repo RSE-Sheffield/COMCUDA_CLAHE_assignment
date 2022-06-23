@@ -66,6 +66,7 @@
     <CudaCompile>
       <Include>$(ProjectDir)</Include>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <AdditionalOptions>-Xcompiler "/openmp" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -89,6 +90,7 @@
       <Include>$(ProjectDir)</Include>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
+      <AdditionalOptions>-Xcompiler "/openmp" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

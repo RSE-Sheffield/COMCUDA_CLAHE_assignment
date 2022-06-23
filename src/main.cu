@@ -64,7 +64,8 @@ int main(int argc, char **argv)
         input_cimage.data = (unsigned char *)malloc(input_cimage.width * input_cimage.height * input_cimage.channels * sizeof(unsigned char));
         const int user_row_width = user_cimage.width * user_cimage.channels;
         const int input_row_width = input_cimage.width * input_cimage.channels;
-        // Copy cropped data across
+        // Copy cropped data across (use OpenMP in an attempt to trigger OpenMPs hidden init cost)
+#pragma omp parallel for 
         for (int y = 0; y < input_cimage.height; ++y) {
             memcpy(input_cimage.data + y*input_row_width, user_cimage.data + y*user_row_width, input_row_width);
         }
