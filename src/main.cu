@@ -211,7 +211,8 @@ int main(int argc, char **argv)
             if (TOTAL_RUNS > 1)
                 printf("\r%d/%d", runs + 1, TOTAL_RUNS);
             memset(&output_image, 0, sizeof(Image));
-            output_image.data = (unsigned char*)malloc(input_image.width * input_image.height);
+            output_image.data = (unsigned char*)malloc(input_image.width * input_image.height * sizeof(unsigned char));
+            memset(output_image.data, 0, input_image.width * input_image.height * sizeof(unsigned char));
             // Run Adaptive Histogram algorithm
             CUDA_CALL(cudaEventRecord(startT));
             CUDA_CALL(cudaEventSynchronize(startT));
@@ -351,7 +352,7 @@ int main(int argc, char **argv)
         int s_size = v_size < o_size ? v_size : o_size;
         int bad_pixels = 0;
         int close_pixels = 0;
-        if (output_image.data) {
+        if (output_image.data && s_size) {
             for (int i = 0; i < s_size; ++i) {
                 if (output_image.data[i] != validation_image.data[i]) {
                     // Give a +-1 threshold for error (incase fast-math triggers a small difference in places)
@@ -369,7 +370,7 @@ int main(int argc, char **argv)
                 printf(CONSOLE_GREEN "Pass" CONSOLE_RESET "\n");
             }
         } else {
-            printf("\tImage pixels: " CONSOLE_RED "Fail" CONSOLE_RESET ", (output_image->data not set)\n");
+            printf("\tImage pixels: " CONSOLE_RED "Fail" CONSOLE_RESET "\n");
         }
         int bad_contrast = 1;
         for (int i = 0; i < PIXEL_RANGE && validation_most_common_contrast[i] != -1; ++i){
