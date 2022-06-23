@@ -42,10 +42,10 @@ void cuda_end(Image *output_image);
  */
 #if defined(_DEBUG) || defined(D_DEBUG)
 #define CUDA_CALL(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-#define CUDA_CHECK(location) { gpuAssert(cudaDeviceSynchronize(), __FILE__, __LINE__); }
+#define CUDA_CHECK() { gpuAssert(cudaDeviceSynchronize(), __FILE__, __LINE__); }
 #else
 #define CUDA_CALL(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-#define CUDA_CHECK(location) { gpuAssert(cudaPeekAtLastError(), __FILE__, __LINE__); }
+#define CUDA_CHECK() { gpuAssert(cudaPeekAtLastError(), __FILE__, __LINE__); }
 #endif
 inline void gpuAssert(cudaError_t code, const char *file, int line) {
     if (code != cudaSuccess) {
