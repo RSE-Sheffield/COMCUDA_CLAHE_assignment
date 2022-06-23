@@ -253,4 +253,11 @@ void cpu_end(Image *output_image) {
     free(cpu_limited_histograms);
     free(cpu_cumulative_histograms);
     free(cpu_equalised_histograms);
+    // Return ptrs to nullptr
+    cpu_output_image.data = 0;
+    cpu_input_image.data = 0;
+    cpu_histograms = 0;
+    cpu_limited_histograms = 0;
+    cpu_cumulative_histograms = 0;
+    cpu_equalised_histograms = 0;
 }

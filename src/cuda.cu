@@ -109,4 +109,12 @@ void cuda_end(Image *output_image) {
     CUDA_CALL(cudaFree(d_cumulative_histograms));
     CUDA_CALL(cudaFree(d_limited_histograms));
     CUDA_CALL(cudaFree(d_histograms));
+    // Return ptrs to nullptr
+    d_output_image_data = nullptr;
+    d_input_image_data = nullptr;
+    d_equalised_histograms = nullptr;
+    d_cumulative_histograms = nullptr;
+    d_limited_histograms = nullptr;
+    d_histograms = nullptr;
+    cuda_input_image.data = nullptr;
 }
