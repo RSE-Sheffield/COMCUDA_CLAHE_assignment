@@ -1,5 +1,4 @@
 #include "cpu.h"
-#include "helper.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -76,44 +75,45 @@ void cpu_begin(const Image *input_image) {
     cpu_output_image.data = (unsigned char *)malloc(input_image->width * input_image->height);
 
 }
-int cpu_stage1() {
-    unsigned long long global_histogram[PIXEL_RANGE];
-    memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
-    // Generate histogram per tile
-    for (unsigned int t_x = 0; t_x < cpu_TILES_X; ++t_x) {
-        for (unsigned int t_y = 0; t_y < cpu_TILES_Y; ++t_y) {
-            const unsigned int tile_index = (t_y * cpu_TILES_X + t_x);
-            const unsigned int tile_offset = (t_y * cpu_TILES_X * TILE_SIZE * TILE_SIZE + t_x * TILE_SIZE); 
-            // For each pixel within the tile
-            for (int p_x = 0; p_x < TILE_SIZE; ++p_x) {
-                for (int p_y = 0; p_y < TILE_SIZE; ++p_y) {
-                    // Load pixel
-                    const unsigned int pixel_offset = (p_y * cpu_input_image.width + p_x); 
-                    const unsigned char pixel = cpu_input_image.data[tile_offset + pixel_offset];
-                    cpu_histograms[tile_index].histogram[pixel]++;
-                    global_histogram[pixel]++;
+int cpu_CLAHE() {
+    /**
+     * Stage 1: Histogram Generation
+     */
+    int max_i = -1; // Index (contrast value) of the histogram bin with max_c, init with an invalid value
+    {
+        unsigned long long global_histogram[PIXEL_RANGE];
+        memset(global_histogram, 0, sizeof(unsigned long long) * PIXEL_RANGE);
+        // Generate histogram per tile
+        for (unsigned int t_x = 0; t_x < cpu_TILES_X; ++t_x) {
+            for (unsigned int t_y = 0; t_y < cpu_TILES_Y; ++t_y) {
+                const unsigned int tile_index = (t_y * cpu_TILES_X + t_x);
+                const unsigned int tile_offset = (t_y * cpu_TILES_X * TILE_SIZE * TILE_SIZE + t_x * TILE_SIZE);
+                // For each pixel within the tile
+                for (int p_x = 0; p_x < TILE_SIZE; ++p_x) {
+                    for (int p_y = 0; p_y < TILE_SIZE; ++p_y) {
+                        // Load pixel
+                        const unsigned int pixel_offset = (p_y * cpu_input_image.width + p_x);
+                        const unsigned char pixel = cpu_input_image.data[tile_offset + pixel_offset];
+                        cpu_histograms[tile_index].histogram[pixel]++;
+                        global_histogram[pixel]++;
+                    }
                 }
             }
         }
-    }
-    // Find the most common contrast value
-    unsigned long long max_c = 0;  // Max count of pixels with a specific contrast value
-    int max_i = -1; // Index (contrast value) of the histogram bin with max_c, init with an invalid value
-    for (int i = 0; i < PIXEL_RANGE; ++i) {
-        if (max_c < global_histogram[i]) {
-            max_c = global_histogram[i];
-            max_i = i;
+        // Find the most common contrast value
+        unsigned long long max_c = 0;  // Max count of pixels with a specific contrast value
+        for (int i = 0; i < PIXEL_RANGE; ++i) {
+            if (max_c < global_histogram[i]) {
+                max_c = global_histogram[i];
+                max_i = i;
+            }
         }
     }
-#ifdef VALIDATION
-    validate_histogram(&cpu_input_image, cpu_histograms, max_i);
-#endif
-    // Return the contrast value (it's index in the histogram), not the number of occurrences!
-    return max_i;
-}
-void cpu_stage2() {
-    // Normalise histograms
-    // https://en.wikipedia.org/wiki/Histogram_equalization#Examples
+
+    /**
+     * Stage 2: Histogram Equalisation
+     * https://en.wikipedia.org/wiki/Histogram_equalization#Examples
+     */
     {
         // For each histogram
         for (unsigned int t_x = 0; t_x < cpu_TILES_X; ++t_x) {
@@ -125,7 +125,8 @@ void cpu_stage2() {
                     if (cpu_histograms[tile_index].histogram[i] > ABSOLUTE_CONTRAST_LIMIT) {
                         extra_contrast += cpu_histograms[tile_index].histogram[i] - ABSOLUTE_CONTRAST_LIMIT;
                         cpu_limited_histograms[tile_index].histogram[i] = ABSOLUTE_CONTRAST_LIMIT;
-                    } else {
+                    }
+                    else {
                         cpu_limited_histograms[tile_index].histogram[i] = cpu_histograms[tile_index].histogram[i];
                     }
                 }
@@ -141,8 +142,8 @@ void cpu_stage2() {
                 cpu_cumulative_histograms[tile_index].histogram[0] = cpu_limited_histograms[tile_index].histogram[0];
                 unsigned int cdf_min = cpu_cumulative_histograms[tile_index].histogram[0];
                 for (unsigned int i = 1; i < PIXEL_RANGE; ++i) {
-                    cpu_cumulative_histograms[tile_index].histogram[i] = cpu_cumulative_histograms[tile_index].histogram[i-1] + cpu_limited_histograms[tile_index].histogram[i];
-                    if (cpu_cumulative_histograms[tile_index].histogram[i-1] == 0 && cpu_cumulative_histograms[tile_index].histogram[i] != 0) { // Second half of condition is redundant in serial
+                    cpu_cumulative_histograms[tile_index].histogram[i] = cpu_cumulative_histograms[tile_index].histogram[i - 1] + cpu_limited_histograms[tile_index].histogram[i];
+                    if (cpu_cumulative_histograms[tile_index].histogram[i - 1] == 0 && cpu_cumulative_histograms[tile_index].histogram[i] != 0) { // Second half of condition is redundant in serial
                         cdf_min = cpu_cumulative_histograms[tile_index].histogram[i];
                     }
                 }
@@ -152,19 +153,14 @@ void cpu_stage2() {
                     t = t > PIXEL_MAX ? PIXEL_MAX : t; // indices before cdf_min overflow
                     // Clamp value to bounds
                     cpu_equalised_histograms[tile_index].histogram[i] = (unsigned char)t;
-                    
+
                 }
             }
         }
     }
-#ifdef VALIDATION
-    // validate_limited_histogram(cpu_TILES_X, cpu_TILES_Y, cpu_histograms, cpu_limited_histograms);
-    // validate_cumulative_histogram(cpu_TILES_X, cpu_TILES_Y, cpu_limited_histograms, cpu_cumulative_histograms);
-    validate_equalised_histogram(cpu_TILES_X, cpu_TILES_Y, cpu_histograms, cpu_equalised_histograms);
-#endif
-}
-void cpu_stage3() {
-    // Calculate interpolated pixels from normalised histograms
+    /**
+     * Stage 3: Histogram Interpolation
+     */
     {
         // For each tile
         for (unsigned int t_x = 0; t_x < cpu_TILES_X; ++t_x) {
@@ -237,9 +233,10 @@ void cpu_stage3() {
             }
         }
     }
-#ifdef VALIDATION
-    validate_interpolate(&cpu_input_image, cpu_equalised_histograms, &cpu_output_image);
-#endif
+
+    // Return the contrast value (it's index in the histogram), not the number of occurrences!
+    // (This was calculated during stage 1)
+    return max_i;
 }
 void cpu_end(Image *output_image) {
     // Store return value
@@ -253,4 +250,11 @@ void cpu_end(Image *output_image) {
     free(cpu_limited_histograms);
     free(cpu_cumulative_histograms);
     free(cpu_equalised_histograms);
+    // Return ptrs to nullptr
+    cpu_output_image.data = 0;
+    cpu_input_image.data = 0;
+    cpu_histograms = 0;
+    cpu_limited_histograms = 0;
+    cpu_cumulative_histograms = 0;
+    cpu_equalised_histograms = 0;
 }

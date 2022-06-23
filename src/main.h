@@ -74,9 +74,7 @@ struct HSVImage {
 struct Runtimes
 {
     float init;
-    float stage1;
-    float stage2;
-    float stage3;
+    float end;
     float cleanup;
     float total;
 };

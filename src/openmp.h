@@ -14,19 +14,15 @@ extern "C" {
  */
 void openmp_begin(const Image *input_image);
 /**
- * Create a locatlised histogram for each tile of the image
- */
-int openmp_stage1();
-/**
+ * Your OpenMP optimised CLAHE algorithm
+ * Create a localised histogram for each tile of the image
  * Equalise the histograms
- */
-void openmp_stage2();
-/**
  * Interpolate the histograms to construct the contrast enhanced image for output
+ * @return The most common contrast value
  */
-void openmp_stage3();
+int openmp_CLAHE();
 /**
- * The cleanup and return function for the CPU CLAHE implemention
+ * The cleanup and return function for the OpenMP CLAHE implemention
  * Memory should be freed, and the final image copied to output_image
  * @param output_image Pointer to a struct to store the final image to be output, output_image->data is pre-allocated
  */
